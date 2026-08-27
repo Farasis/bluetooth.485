@@ -21,7 +21,8 @@ const btEcho = $('bt-echo'), btScan = $('bt-scan'), btDisconnect = $('bt-disconn
       btNotice = $('bt-notice'),
       btPreset = $('bt-preset'), btAllDevices = $('bt-all-devices'),
       btSvc = $('bt-svc'), btRx = $('bt-rx'), btTx = $('bt-tx'),
-      btAutoPacket = $('bt-auto-packet'), btMtuPreset = $('bt-mtu-preset');
+      btAutoPacket = $('bt-auto-packet'), btMtuPreset = $('bt-mtu-preset'),
+      btAtCmd = $('bt-at-cmd'), btAtSend = $('bt-at-send'), btAtCrlf = $('bt-at-crlf');
 
 const serModeSim = $('ser-mode-sim'), serModeReal = $('ser-mode-real'),
       simControls = $('sim-controls'), realControls = $('real-controls'),
@@ -51,6 +52,12 @@ function showNotice(el, msg) {
   el.classList.remove('hidden');
 }
 function clearNotice(el) { el.classList.add('hidden'); }
+/** 短暂显示提示后自动消失 */
+function flashNotice(el, msg, ms = 3000) {
+  showNotice(el, msg);
+  clearTimeout(el._flashTimer);
+  el._flashTimer = setTimeout(() => clearNotice(el), ms);
+}
 
 /** 归一化 UUID 输入：去掉 0x、转小写、去空白 */
 function normUuid(s) {
@@ -96,6 +103,7 @@ function updateBtUI() {
   const connected = currentBle.connected;
   btDisconnect.disabled = !connected;
   btEcho.disabled = connected;
+  btAtSend.disabled = !(connected && !btEcho.checked);
   if (connected) {
     btDevice.textContent = currentBle.name === '模拟对端' ? '模拟对端' : (bleClient._device?.name || '已连接设备');
     stBtVal.textContent = currentBle.name === '模拟对端' ? '已连接（模拟对端）' : '已连接';
@@ -125,6 +133,11 @@ function rebuildBridge() {
 
 // ===== 日志 =====
 function handleFrame({ direction, bytes, ts }) {
+  appendLog(direction, bytes, new Date(ts));
+}
+
+/** 追加一条日志（计数 + 渲染，尊重暂停/显示过滤） */
+function appendLog(direction, bytes, date) {
   counters[direction === 'tx' ? 'tx' : 'rx'] += bytes.length;
   counters.frames += 1;
   updateCounters();
@@ -133,7 +146,7 @@ function handleFrame({ direction, bytes, ts }) {
   if (direction === 'tx' && !showTx.checked) return;
   if (direction === 'rx' && !showRx.checked) return;
 
-  renderRow(direction, bytes, new Date(ts));
+  renderRow(direction, bytes, date);
 }
 
 function updateCounters() {
@@ -254,6 +267,29 @@ btAutoPacket.addEventListener('change', syncAutoPacketUI);
 btMtuPreset.addEventListener('change', () => {
   bleClient.config.mtuPreset = parseInt(btMtuPreset.value, 10) || 23;
   syncAutoPacketUI();
+});
+
+// ===== 发送 AT 指令（直接写到 BLE 发送特征，不经 485 桥）=====
+btAtSend.addEventListener('click', async () => {
+  clearNotice(btNotice);
+  if (btEcho.checked || !currentBle.connected) {
+    showNotice(btNotice, '请取消「模拟对端」并连接真实蓝牙设备后再发送 AT');
+    return;
+  }
+  const text = btAtCmd.value;
+  if (!text) return;
+  let data = new TextEncoder().encode(text);
+  if (btAtCrlf.checked) data = concatBytes(data, new Uint8Array([0x0d, 0x0a]));
+  try {
+    await currentBle.send(data);
+    appendLog('tx', data, new Date());
+    flashNotice(btNotice, `已发送：${text}${btAtCrlf.checked ? ' \\r\\n' : ''}`);
+  } catch (err) {
+    showNotice(btNotice, err.message || '发送失败');
+  }
+});
+btAtCmd.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); btAtSend.click(); }
 });
 
 // ===== 串口控制 =====
@@ -480,6 +516,8 @@ async function init() {
     btTx.disabled = true;
     btAutoPacket.disabled = true;
     btMtuPreset.disabled = true;
+    btAtCmd.disabled = true;
+    btAtSend.disabled = true;
   }
 }
 

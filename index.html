@@ -8,7 +8,7 @@
 </head>
 <body>
   <header id="status-bar">
-    <span class="app-title">蓝牙 ⇄ RS485 解析传输 <span class="hint" id="app-ver">v1.2</span></span>
+    <span class="app-title">蓝牙 ⇄ RS485 解析传输 <span class="hint" id="app-ver">v1.3</span></span>
     <span class="chip">蓝牙: <b id="st-bt-val" class="st-off">未连接</b></span>
     <span class="chip">485 串口: <b id="st-serial-val" class="st-off">模拟 · 未启动</b></span>
     <span class="chip">发送 <span id="cnt-tx">0</span>B · 接收 <span id="cnt-rx">0</span>B · 帧 <span id="cnt-frames">0</span></span>
@@ -78,6 +78,15 @@
         </label>
         <label>接收特征
           <input type="text" id="bt-tx" value="6e400003-b5a3-f393-e0a9-e50e24dcca9e" size="40" spellcheck="false">
+        </label>
+      </div>
+      <div class="ctrl">
+        <label>发送 AT 指令
+          <input type="text" id="bt-at-cmd" placeholder="如 AT+LENAmy_bt" size="30" spellcheck="false">
+        </label>
+        <button id="bt-at-send">发送</button>
+        <label title="AT 指令以回车换行结束，一般需要勾选">
+          <input type="checkbox" id="bt-at-crlf" checked> 附加 \r\n
         </label>
       </div>
       <div id="bt-notice" class="notice hidden"></div>
