@@ -45,6 +45,29 @@
           <input type="number" id="bt-write-delay" value="5" min="0" max="500"> ms
         </label>
       </div>
+      <div class="ctrl">
+        <label>UUID 预设
+          <select id="bt-preset">
+            <option value="nus">标准 NUS (Nordic UART)</option>
+            <option value="i6328a">I6328A / VG6328A</option>
+            <option value="custom">自定义</option>
+          </select>
+        </label>
+        <label title="不按服务过滤，列出所有 BLE 设备">
+          <input type="checkbox" id="bt-all-devices"> 扫描全部设备
+        </label>
+      </div>
+      <div id="bt-uuids" class="ctrl">
+        <label>服务 UUID
+          <input type="text" id="bt-svc" value="6e400001-b5a3-f393-e0a9-e50e24dcca9e" size="40" spellcheck="false">
+        </label>
+        <label>发送特征
+          <input type="text" id="bt-rx" value="6e400002-b5a3-f393-e0a9-e50e24dcca9e" size="40" spellcheck="false">
+        </label>
+        <label>接收特征
+          <input type="text" id="bt-tx" value="6e400003-b5a3-f393-e0a9-e50e24dcca9e" size="40" spellcheck="false">
+        </label>
+      </div>
       <div id="bt-notice" class="notice hidden"></div>
     </section>
 

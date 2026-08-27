@@ -1,5 +1,5 @@
 // main.js — 应用控制器：DOM 接线、日志渲染、自检
-import { BLEClient, SimBLEClient } from './ble.js';
+import { BLEClient, SimBLEClient, NUS_SERVICE, NUS_RX_WRITE, NUS_TX_NOTIFY } from './ble.js';
 import { SimSerialPort, WebSerialPort } from './serial.js';
 import { Bridge } from './bridge.js';
 import { parseModbusFrame, parseModbusStream, appendCrc } from './modbus.js';
@@ -18,7 +18,9 @@ const fwdTx = $('fwd-tx'), fwdRx = $('fwd-rx'), frameIdle = $('frame-idle');
 
 const btEcho = $('bt-echo'), btScan = $('bt-scan'), btDisconnect = $('bt-disconnect'),
       btDevice = $('bt-device'), btPacket = $('bt-packet'), btWriteDelay = $('bt-write-delay'),
-      btNotice = $('bt-notice');
+      btNotice = $('bt-notice'),
+      btPreset = $('bt-preset'), btAllDevices = $('bt-all-devices'),
+      btSvc = $('bt-svc'), btRx = $('bt-rx'), btTx = $('bt-tx');
 
 const serModeSim = $('ser-mode-sim'), serModeReal = $('ser-mode-real'),
       simControls = $('sim-controls'), realControls = $('real-controls'),
@@ -48,6 +50,26 @@ function showNotice(el, msg) {
   el.classList.remove('hidden');
 }
 function clearNotice(el) { el.classList.add('hidden'); }
+
+/** 归一化 UUID 输入：去掉 0x、转小写、去空白 */
+function normUuid(s) {
+  return String(s).trim().toLowerCase().replace(/^0x/, '');
+}
+
+/** 常见透传模块 UUID 预设 */
+const BT_PRESETS = {
+  nus:    { svc: NUS_SERVICE, rx: NUS_RX_WRITE, tx: NUS_TX_NOTIFY },
+  i6328a: { svc: 'fff0', rx: 'fff3', tx: 'fff4' },
+};
+
+function applyBtPreset() {
+  const p = BT_PRESETS[btPreset.value];
+  if (!p) return; // 自定义：保留用户输入
+  btSvc.value = p.svc;
+  btRx.value = p.rx;
+  btTx.value = p.tx;
+}
+btPreset.addEventListener('change', applyBtPreset);
 
 // ===== 状态接线 =====
 function wireBle(ble) {
@@ -173,6 +195,11 @@ btScan.addEventListener('click', async () => {
         showNotice(btNotice, '当前浏览器不支持 Web Bluetooth，请用 Chrome/Edge 桌面版，通过 localhost 打开页面。');
         return;
       }
+      // 扫描前把 UI 里的 UUID / 过滤选项同步进客户端
+      bleClient.config.serviceUuid = normUuid(btSvc.value);
+      bleClient.config.rxWriteUuid = normUuid(btRx.value);
+      bleClient.config.txNotifyUuid = normUuid(btTx.value);
+      bleClient.config.includeAllDevices = btAllDevices.checked;
       const device = await bleClient.requestDevice();
       btDevice.textContent = device.name || '未知设备';
       await bleClient.connect(device);
@@ -427,6 +454,11 @@ async function init() {
     btScan.disabled = true;
     btPacket.disabled = true;
     btWriteDelay.disabled = true;
+    btPreset.disabled = true;
+    btAllDevices.disabled = true;
+    btSvc.disabled = true;
+    btRx.disabled = true;
+    btTx.disabled = true;
   }
 }
 

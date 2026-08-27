@@ -1,6 +1,7 @@
 // ble.js — 蓝牙连接层
 // 提供两个实现同一接口的类：
-//   BLEClient   —— 真实 BLE（Nordic UART Service / NUS）透传
+//   BLEClient   —— 真实 BLE 透传（默认 Nordic UART Service / NUS，服务/特征 UUID 可配置，
+//                  例如 I6328A/VG6328A 模块用 FFF0/FFF3/FFF4）
 //   SimBLEClient —— 模拟对端（Echo）：收到的数据原样回显，无硬件时验证完整链路
 //
 // 接口：{ name, connected, isSupported(), connect(), close(), send(bytes),
@@ -8,9 +9,9 @@
 //  onData = 设备 → 应用 的通知流（应用把数据转发给 485/串口）
 //  send   = 应用 → 设备（应用把 485 收到的数据转发给蓝牙）
 
-const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'; // Nordic UART Service
-const NUS_RX_WRITE = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // app → device（写）
-const NUS_TX_NOTIFY = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // device → app（通知）
+export const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'; // Nordic UART Service
+export const NUS_RX_WRITE = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // app → device（写）
+export const NUS_TX_NOTIFY = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // device → app（通知）
 
 /** DataView → 只读对应区间的 Uint8Array（DataView 可能指向更大的 ArrayBuffer） */
 function toUint8(dv) {
@@ -28,8 +29,12 @@ export class BLEClient {
     this._txChar = null;
     this._connecting = false;
     this.config = {
-      packetSize: 20,      // 写分包大小（默认 MTU 安全值）
-      interChunkDelayMs: 5, // 分包间隔，WriteWithoutResponse 时是唯一背压
+      serviceUuid: NUS_SERVICE,      // GATT 服务 UUID
+      rxWriteUuid: NUS_RX_WRITE,     // app → device（写特征）
+      txNotifyUuid: NUS_TX_NOTIFY,   // device → app（通知特征）
+      includeAllDevices: false,      // true 时扫描全部设备（需 optionalServices）
+      packetSize: 20,                // 写分包大小（默认 MTU 安全值）
+      interChunkDelayMs: 5,          // 分包间隔，WriteWithoutResponse 时是唯一背压
     };
     this.onData = () => {};
     this.onStatus = () => {};
@@ -48,11 +53,11 @@ export class BLEClient {
     if (this.config.includeAllDevices) {
       return navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
-        optionalServices: [NUS_SERVICE],
+        optionalServices: [this.config.serviceUuid],
       });
     }
     return navigator.bluetooth.requestDevice({
-      filters: [{ services: [NUS_SERVICE] }],
+      filters: [{ services: [this.config.serviceUuid] }],
     });
   }
 
@@ -66,9 +71,9 @@ export class BLEClient {
       this._server = await device.gatt.connect();
       device.ongattserverdisconnected = () => this._onDisconnected();
 
-      this._service = await this._server.getPrimaryService(NUS_SERVICE);
-      this._rxChar = await this._service.getCharacteristic(NUS_RX_WRITE);
-      this._txChar = await this._service.getCharacteristic(NUS_TX_NOTIFY);
+      this._service = await this._server.getPrimaryService(this.config.serviceUuid);
+      this._rxChar = await this._service.getCharacteristic(this.config.rxWriteUuid);
+      this._txChar = await this._service.getCharacteristic(this.config.txNotifyUuid);
 
       await this._txChar.startNotifications();
       this._charChangedHandler = (e) => this.onData(toUint8(e.target.value));
@@ -79,7 +84,7 @@ export class BLEClient {
     } catch (err) {
       this._cleanup();
       if (err.name === 'NotFoundError') {
-        this.onStatus('设备不提供 NUS 串口服务');
+        this.onStatus(`设备不提供服务 ${this.config.serviceUuid}`);
       } else {
         this.onError(err);
         this.onStatus(`连接失败：${err.message || err}`);
