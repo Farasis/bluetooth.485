@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>蓝牙-485 解析传输软件</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="status-bar">
+    <span class="app-title">蓝牙 ⇄ RS485 解析传输</span>
+    <span class="chip">蓝牙: <b id="st-bt-val" class="st-off">未连接</b></span>
+    <span class="chip">485 串口: <b id="st-serial-val" class="st-off">模拟 · 未启动</b></span>
+    <span class="chip">发送 <span id="cnt-tx">0</span>B · 接收 <span id="cnt-rx">0</span>B · 帧 <span id="cnt-frames">0</span></span>
+  </header>
+
+  <div id="bar-bridge">
+    <label title="勾选后，从串口/485 收到的数据会转发到蓝牙设备">
+      <input type="checkbox" id="fwd-tx" checked> 转发 串口→蓝牙
+    </label>
+    <label title="勾选后，从蓝牙设备收到的数据会转发到串口/485">
+      <input type="checkbox" id="fwd-rx" checked> 转发 蓝牙→串口
+    </label>
+    <label>帧空闲超时
+      <input type="number" id="frame-idle" value="20" min="1" max="1000"> ms
+    </label>
+  </div>
+
+  <main id="cards">
+    <section id="card-ble" class="card">
+      <h2>蓝牙 <span class="hint">Nordic UART / NUS</span></h2>
+      <div class="ctrl">
+        <label title="无硬件时模拟一个蓝牙从机，收到的数据原样回显">
+          <input type="checkbox" id="bt-echo"> 模拟对端 (Echo)
+        </label>
+        <button id="bt-scan">扫描 / 连接</button>
+        <button id="bt-disconnect" disabled>断开</button>
+        <span id="bt-device" class="muted">未选择设备</span>
+      </div>
+      <div class="ctrl">
+        <label>写包大小
+          <input type="number" id="bt-packet" value="20" min="1" max="512"> 字节
+        </label>
+        <label>分包间隔
+          <input type="number" id="bt-write-delay" value="5" min="0" max="500"> ms
+        </label>
+      </div>
+      <div id="bt-notice" class="notice hidden"></div>
+    </section>
+
+    <section id="card-serial" class="card">
+      <h2>485 串口</h2>
+      <div class="ctrl">
+        <label><input type="radio" name="serial-mode" id="ser-mode-sim" checked> 模拟</label>
+        <label><input type="radio" name="serial-mode" id="ser-mode-real"> 真实 (Web Serial)</label>
+      </div>
+      <div id="sim-controls" class="ctrl">
+        <label>周期
+          <input type="number" id="sim-interval" value="1000" min="50"> ms
+        </label>
+        <label title="按设定周期自动发送测试帧">
+          <input type="checkbox" id="sim-auto" checked> 自动周期发送
+        </label>
+        <label class="wide">测试帧
+          <input type="text" id="sim-frame" value="01 03 00 00 00 01 84 0A" size="30" spellcheck="false">
+        </label>
+        <button id="sim-send">发送测试帧</button>
+      </div>
+      <div id="real-controls" class="ctrl hidden">
+        <label>波特率
+          <select id="serial-baud">
+            <option value="2400">2400</option>
+            <option value="4800">4800</option>
+            <option value="9600" selected>9600</option>
+            <option value="19200">19200</option>
+            <option value="38400">38400</option>
+            <option value="57600">57600</option>
+            <option value="115200">115200</option>
+          </select>
+        </label>
+        <button id="serial-open">选择并打开串口</button>
+        <button id="serial-close" disabled>关闭</button>
+      </div>
+      <div id="serial-notice" class="notice hidden"></div>
+    </section>
+  </main>
+
+  <section id="card-log" class="card log-card">
+    <div id="log-toolbar">
+      <label><input type="checkbox" id="show-tx" checked> 显示 发送</label>
+      <label><input type="checkbox" id="show-rx" checked> 显示 接收</label>
+      <label><input type="checkbox" id="autoscroll" checked> 自动滚动</label>
+      <button id="log-pause">暂停</button>
+      <button id="log-clear">清空</button>
+      <button id="log-selftest">自检</button>
+      <span id="log-stats" class="muted"></span>
+    </div>
+    <div id="log" aria-live="off"></div>
+  </section>
+
+  <template id="tpl-row">
+    <div class="row">
+      <span class="ts"></span>
+      <span class="dir"></span>
+      <div class="body">
+        <div class="hex"></div>
+        <div class="ascii"></div>
+        <div class="parse"></div>
+      </div>
+    </div>
+  </template>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
