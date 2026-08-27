@@ -33,7 +33,9 @@ export class BLEClient {
       rxWriteUuid: NUS_RX_WRITE,     // app → device（写特征）
       txNotifyUuid: NUS_TX_NOTIFY,   // device → app（通知特征）
       includeAllDevices: false,      // true 时扫描全部设备（需 optionalServices）
-      packetSize: 20,                // 写分包大小（默认 MTU 安全值）
+      packetSize: 20,                // 手动写分包大小（默认 MTU 安全值）
+      autoPacketSize: false,         // true 时按 mtuPreset 自动分包（MTU-3）
+      mtuPreset: 23,                 // 模块支持的 ATT MTU（23/247/512 等）
       interChunkDelayMs: 5,          // 分包间隔，WriteWithoutResponse 时是唯一背压
     };
     this.onData = () => {};
@@ -101,7 +103,9 @@ export class BLEClient {
    */
   async send(bytes) {
     if (!this.connected || !this._rxChar) throw new Error('蓝牙未连接');
-    const size = Math.max(1, Math.min(512, this.config.packetSize | 0) || 20);
+    // 自动分包：单包 = MTU - 3；否则用手动写包大小
+    const autoSize = this.config.autoPacketSize ? Math.max(1, (this.config.mtuPreset || 23) - 3) : 0;
+    const size = autoSize || (Math.max(1, Math.min(512, this.config.packetSize | 0) || 20));
     const delay = Math.max(0, Math.min(500, this.config.interChunkDelayMs | 0) || 0);
     for (let i = 0; i < bytes.length; i += size) {
       if (!this.connected) return; // close() 中途中止

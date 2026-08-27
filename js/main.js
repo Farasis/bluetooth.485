@@ -20,7 +20,8 @@ const btEcho = $('bt-echo'), btScan = $('bt-scan'), btDisconnect = $('bt-disconn
       btDevice = $('bt-device'), btPacket = $('bt-packet'), btWriteDelay = $('bt-write-delay'),
       btNotice = $('bt-notice'),
       btPreset = $('bt-preset'), btAllDevices = $('bt-all-devices'),
-      btSvc = $('bt-svc'), btRx = $('bt-rx'), btTx = $('bt-tx');
+      btSvc = $('bt-svc'), btRx = $('bt-rx'), btTx = $('bt-tx'),
+      btAutoPacket = $('bt-auto-packet'), btMtuPreset = $('bt-mtu-preset');
 
 const serModeSim = $('ser-mode-sim'), serModeReal = $('ser-mode-real'),
       simControls = $('sim-controls'), realControls = $('real-controls'),
@@ -200,6 +201,8 @@ btScan.addEventListener('click', async () => {
       bleClient.config.rxWriteUuid = normUuid(btRx.value);
       bleClient.config.txNotifyUuid = normUuid(btTx.value);
       bleClient.config.includeAllDevices = btAllDevices.checked;
+      bleClient.config.autoPacketSize = btAutoPacket.checked;
+      bleClient.config.mtuPreset = parseInt(btMtuPreset.value, 10) || 23;
       const device = await bleClient.requestDevice();
       btDevice.textContent = device.name || '未知设备';
       await bleClient.connect(device);
@@ -231,10 +234,26 @@ btEcho.addEventListener('change', () => {
 });
 
 btPacket.addEventListener('change', () => {
-  bleClient.config.packetSize = parseInt(btPacket.value, 10) || 20;
+  if (!btAutoPacket.checked) bleClient.config.packetSize = parseInt(btPacket.value, 10) || 20;
 });
 btWriteDelay.addEventListener('change', () => {
   bleClient.config.interChunkDelayMs = parseInt(btWriteDelay.value, 10) || 5;
+});
+function syncAutoPacketUI() {
+  const auto = btAutoPacket.checked;
+  btPacket.disabled = auto;
+  bleClient.config.autoPacketSize = auto;
+  if (auto) {
+    const mtu = parseInt(btMtuPreset.value, 10) || 23;
+    bleClient.config.mtuPreset = mtu;
+    bleClient.config.packetSize = mtu - 3;
+    btPacket.value = String(mtu - 3);
+  }
+}
+btAutoPacket.addEventListener('change', syncAutoPacketUI);
+btMtuPreset.addEventListener('change', () => {
+  bleClient.config.mtuPreset = parseInt(btMtuPreset.value, 10) || 23;
+  syncAutoPacketUI();
 });
 
 // ===== 串口控制 =====
@@ -459,6 +478,8 @@ async function init() {
     btSvc.disabled = true;
     btRx.disabled = true;
     btTx.disabled = true;
+    btAutoPacket.disabled = true;
+    btMtuPreset.disabled = true;
   }
 }
 

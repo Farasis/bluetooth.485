@@ -8,7 +8,7 @@
 </head>
 <body>
   <header id="status-bar">
-    <span class="app-title">蓝牙 ⇄ RS485 解析传输 <span class="hint" id="app-ver">v1.1</span></span>
+    <span class="app-title">蓝牙 ⇄ RS485 解析传输 <span class="hint" id="app-ver">v1.2</span></span>
     <span class="chip">蓝牙: <b id="st-bt-val" class="st-off">未连接</b></span>
     <span class="chip">485 串口: <b id="st-serial-val" class="st-off">模拟 · 未启动</b></span>
     <span class="chip">发送 <span id="cnt-tx">0</span>B · 接收 <span id="cnt-rx">0</span>B · 帧 <span id="cnt-frames">0</span></span>
@@ -43,6 +43,18 @@
         </label>
         <label>分包间隔
           <input type="number" id="bt-write-delay" value="5" min="0" max="500"> ms
+        </label>
+      </div>
+      <div class="ctrl">
+        <label title="勾选后按下方 MTU 自动计算单包字节数（MTU-3）；需模块支持该 MTU，否则写入报长度错误">
+          <input type="checkbox" id="bt-auto-packet"> 按 MTU 自动分包
+        </label>
+        <label>MTU
+          <select id="bt-mtu-preset">
+            <option value="23">23 · 默认(20B)</option>
+            <option value="247">247 · BLE4.2+(244B)</option>
+            <option value="512">512 · BLE5.x(509B)</option>
+          </select>
         </label>
       </div>
       <div class="ctrl">
