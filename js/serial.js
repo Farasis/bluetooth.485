@@ -17,7 +17,7 @@ export class SimSerialPort {
     this.config = {
       intervalMs: config.intervalMs ?? 1000,
       frameHex: config.frameHex ?? '01 03 00 00 00 01 84 0A',
-      auto: config.auto ?? true,
+      auto: config.auto ?? false,   // 默认不自动周期发送；勾选「自动周期发送」后才开始
       echo: config.echo ?? false,   // 串口回环：send 后延时回显（模拟 485 从站）
     };
     this._frameBytes = null;

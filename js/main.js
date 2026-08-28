@@ -19,7 +19,7 @@ const fwdTx = $('fwd-tx'), fwdRx = $('fwd-rx'), frameIdle = $('frame-idle');
 const btEcho = $('bt-echo'), btScan = $('bt-scan'), btDisconnect = $('bt-disconnect'),
       btDevice = $('bt-device'), btPacket = $('bt-packet'), btWriteDelay = $('bt-write-delay'),
       btNotice = $('bt-notice'),
-      btPreset = $('bt-preset'), btAllDevices = $('bt-all-devices'),
+      btPreset = $('bt-preset'), btAllDevices = $('bt-all-devices'), btAutoUuid = $('bt-auto-uuid'),
       btSvc = $('bt-svc'), btRx = $('bt-rx'), btTx = $('bt-tx'),
       btAutoPacket = $('bt-auto-packet'), btMtuPreset = $('bt-mtu-preset'),
       btAtCmd = $('bt-at-cmd'), btAtSend = $('bt-at-send'), btAtCrlf = $('bt-at-crlf');
@@ -199,6 +199,7 @@ function failureText(f) {
 // ===== 蓝牙控制 =====
 btScan.addEventListener('click', async () => {
   clearNotice(btNotice);
+  bleClient._lastError = null;
   try {
     if (btEcho.checked) {
       currentBle = new SimBLEClient();
@@ -214,17 +215,27 @@ btScan.addEventListener('click', async () => {
       bleClient.config.rxWriteUuid = normUuid(btRx.value);
       bleClient.config.txNotifyUuid = normUuid(btTx.value);
       bleClient.config.includeAllDevices = btAllDevices.checked;
+      bleClient.config.autoDetectUuid = btAutoUuid.checked;
       bleClient.config.autoPacketSize = btAutoPacket.checked;
       bleClient.config.mtuPreset = parseInt(btMtuPreset.value, 10) || 23;
       const device = await bleClient.requestDevice();
       btDevice.textContent = device.name || '未知设备';
       await bleClient.connect(device);
       currentBle = bleClient;
+      const det = bleClient._detected;
+      if (det) {
+        btSvc.value = det.service;
+        btRx.value = det.rx;
+        btTx.value = det.tx;
+        showNotice(btNotice, `已自动识别 UUID：服务 ${det.service}，写 ${det.rx}，通知 ${det.tx}，已填入并生效`);
+      }
     }
     rebuildBridge();
     updateBtUI();
   } catch (err) {
-    if (err?.name === 'NotFoundError') { updateBtUI(); return; } // 用户取消扫描
+    const msg = bleClient._lastError || err?.message;
+    const isCancel = err?.name === 'NotFoundError' && !bleClient._lastError; // 用户取消扫描
+    if (msg && !isCancel) showNotice(btNotice, `连接失败：${msg}`);
     updateBtUI();
   }
 });
@@ -511,6 +522,7 @@ async function init() {
     btWriteDelay.disabled = true;
     btPreset.disabled = true;
     btAllDevices.disabled = true;
+    btAutoUuid.disabled = true;
     btSvc.disabled = true;
     btRx.disabled = true;
     btTx.disabled = true;

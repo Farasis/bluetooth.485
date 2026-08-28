@@ -8,7 +8,7 @@
 </head>
 <body>
   <header id="status-bar">
-    <span class="app-title">蓝牙 ⇄ RS485 解析传输 <span class="hint" id="app-ver">v1.3</span></span>
+    <span class="app-title">蓝牙 ⇄ RS485 解析传输 <span class="hint" id="app-ver">v1.5</span></span>
     <span class="chip">蓝牙: <b id="st-bt-val" class="st-off">未连接</b></span>
     <span class="chip">485 串口: <b id="st-serial-val" class="st-off">模拟 · 未启动</b></span>
     <span class="chip">发送 <span id="cnt-tx">0</span>B · 接收 <span id="cnt-rx">0</span>B · 帧 <span id="cnt-frames">0</span></span>
@@ -68,6 +68,9 @@
         <label title="不按服务过滤，列出所有 BLE 设备">
           <input type="checkbox" id="bt-all-devices"> 扫描全部设备
         </label>
+        <label title="连接后自动枚举设备的写/通知特征，免手动填 UUID">
+          <input type="checkbox" id="bt-auto-uuid" checked> 自动识别 UUID
+        </label>
       </div>
       <div id="bt-uuids" class="ctrl">
         <label>服务 UUID
@@ -103,7 +106,7 @@
           <input type="number" id="sim-interval" value="1000" min="50"> ms
         </label>
         <label title="按设定周期自动发送测试帧">
-          <input type="checkbox" id="sim-auto" checked> 自动周期发送
+          <input type="checkbox" id="sim-auto"> 自动周期发送
         </label>
         <label class="wide">测试帧
           <input type="text" id="sim-frame" value="01 03 00 00 00 01 84 0A" size="30" spellcheck="false">
